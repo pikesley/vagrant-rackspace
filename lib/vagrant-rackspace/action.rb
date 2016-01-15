@@ -12,14 +12,38 @@ module VagrantPlugins
       def self.action_destroy
         Vagrant::Action::Builder.new.tap do |b|
           b.use ConfigValidate
+          b.use Call, IsCreated do |env, b1|
+            if !env[:result]
+              b1.use MessageNotCreated
+              next
+            end
+
+            b1.use Call, DestroyConfirm do |env1, b2|
+              if env1[:result]
+                b2.use ConnectRackspace
+                b2.use DeleteServer
+                b2.use ProvisionerCleanup if defined?(ProvisionerCleanup)
+              else
+                b2.use Message, I18n.t("vagrant_rackspace.will_not_destroy")
+                next
+              end
+            end
+          end
+        end
+      end
+
+      # This action is called when `vagrant provision` is called.
+      def self.action_provision
+        Vagrant::Action::Builder.new.tap do |b|
+          b.use ConfigValidate
           b.use Call, IsCreated do |env, b2|
             if !env[:result]
               b2.use MessageNotCreated
               next
             end
 
-            b2.use ConnectRackspace
-            b2.use DeleteServer
+            b2.use Provision
+            b2.use SyncedFolders
           end
         end
       end
@@ -60,6 +84,20 @@ module VagrantPlugins
         end
       end
 
+      def self.action_ssh_run
+        Vagrant::Action::Builder.new.tap do |b|
+          b.use ConfigValidate
+          b.use Call, IsCreated do |env, b2|
+            if !env[:result]
+              b2.use MessageNotCreated
+              next
+            end
+
+            b2.use SSHRun
+          end
+        end
+      end
+
       def self.action_up
         Vagrant::Action::Builder.new.tap do |b|
           b.use ConfigValidate
@@ -71,10 +109,66 @@ module VagrantPlugins
 
             b2.use ConnectRackspace
             b2.use Provision
-            b2.use SyncFolders
-            b2.use WarnNetworks
+            b2.use SyncedFolders
+            b2.use RunInitScript
             b2.use CreateServer
+            b2.use WaitForCommunicator
           end
+        end
+      end
+
+      def self.action_create_image
+        Vagrant::Action::Builder.new.tap do |b|
+          b.use ConfigValidate
+          b.use Call, IsCreated do |env, b2|
+            created = env[:result]
+
+            if !created
+              b2.use MessageNotCreated
+              next
+            end
+
+            b2.use ConnectRackspace
+            b2.use CreateImage
+          end
+        end
+      end
+
+      # Extended actions
+      def self.action_list_images
+        Vagrant::Action::Builder.new.tap do |b|
+          # b.use ConfigValidate # is this per machine?
+          b.use ConnectRackspace
+          b.use ListImages
+        end
+      end
+
+      def self.action_list_flavors
+        Vagrant::Action::Builder.new.tap do |b|
+          # b.use ConfigValidate # is this per machine?
+          b.use ConnectRackspace
+          b.use ListFlavors
+        end
+      end
+
+      def self.action_list_keypairs
+        Vagrant::Action::Builder.new.tap do |b|
+          b.use ConnectRackspace
+          b.use ListKeyPairs
+        end
+      end
+
+      def self.action_list_networks
+        Vagrant::Action::Builder.new.tap do |b|
+          b.use ConnectRackspace
+          b.use ListNetworks
+        end
+      end
+
+      def self.action_list_servers
+        Vagrant::Action::Builder.new.tap do |b|
+          b.use ConnectRackspace
+          b.use ListServers
         end
       end
 
@@ -88,8 +182,13 @@ module VagrantPlugins
       autoload :MessageNotCreated, action_root.join("message_not_created")
       autoload :ReadSSHInfo, action_root.join("read_ssh_info")
       autoload :ReadState, action_root.join("read_state")
-      autoload :SyncFolders, action_root.join("sync_folders")
-      autoload :WarnNetworks, action_root.join("warn_networks")
+      autoload :RunInitScript, action_root.join("run_init_script")
+      autoload :CreateImage, action_root.join("create_image")
+      autoload :ListImages, action_root.join("list_images")
+      autoload :ListFlavors, action_root.join("list_flavors")
+      autoload :ListKeyPairs, action_root.join("list_keypairs")
+      autoload :ListNetworks, action_root.join("list_networks")
+      autoload :ListServers, action_root.join("list_servers")
     end
   end
 end

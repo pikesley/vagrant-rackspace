@@ -12,10 +12,11 @@ Gem::Specification.new do |gem|
   gem.summary       = "Enables Vagrant to manage machines in RackSpace Cloud."
   gem.homepage      = "http://www.vagrantup.com"
 
-  gem.add_runtime_dependency "fog", "~> 1.10.0"
+  gem.add_runtime_dependency "fog", "~> 1.22"
 
   gem.add_development_dependency "rake"
-  gem.add_development_dependency "rspec", "~> 2.13.0"
+  gem.add_development_dependency "rspec", "~> 2.14.0"
+  gem.add_development_dependency "aruba", "~> 0.5.4"
 
   gem.files         = `git ls-files`.split($/)
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }

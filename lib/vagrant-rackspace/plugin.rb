@@ -23,7 +23,7 @@ module VagrantPlugins
         Config
       end
 
-      provider(:rackspace) do
+      provider(:rackspace, { :box_optional => true, parallel: true}) do
         # Setup some things
         Rackspace.init_i18n
         Rackspace.init_logging
@@ -31,6 +31,11 @@ module VagrantPlugins
         # Load the actual provider
         require_relative "provider"
         Provider
+      end
+
+      command('rackspace') do
+        require_relative "command/root"
+        Command::Root
       end
     end
   end
